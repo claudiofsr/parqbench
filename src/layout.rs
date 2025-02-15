@@ -54,11 +54,11 @@ impl MyStyle for Context {
 
         // Redefine text_styles
         style.text_styles = [
-            (Small, FontId::new(10.0, Proportional)),
-            (Body, FontId::new(14.0, Proportional)),
-            (Monospace, FontId::new(14.0, Proportional)),
-            (Button, FontId::new(14.0, Proportional)),
-            (Heading, FontId::new(16.0, Proportional)),
+            (Small, FontId::new(12.0, Proportional)),
+            (Body, FontId::new(15.0, Proportional)),
+            (Monospace, FontId::new(15.0, Proportional)),
+            (Button, FontId::new(15.0, Proportional)),
+            (Heading, FontId::new(18.0, Proportional)),
         ]
         .into();
 
@@ -218,7 +218,7 @@ impl eframe::App for ParqBenchApp {
                             // https://doc.rust-lang.org/cargo/reference/environment-variables.html
                             let version = env!("CARGO_PKG_VERSION");
                             let authors = env!("CARGO_PKG_AUTHORS");
-                            ui.label(RichText::new("ParqBench").font(FontId::proportional(25.0)));
+                            ui.label(RichText::new("ParqBench").font(FontId::proportional(20.0)));
                             ui.label(format!("Version: {version}"));
                             ui.label(format!("Author: {authors}"));
                             ui.label("Built with egui");

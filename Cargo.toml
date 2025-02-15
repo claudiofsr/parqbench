@@ -24,7 +24,7 @@ rfd = { version ="0.13", features = ["file-handle-inner"] }
 tokio = { version = "1.36", features = ["rt", "sync", "rt-multi-thread"] }
 tracing-subscriber = "0.3"
 shellexpand = "3.1"
-parquet = "50.0"
+parquet = "54.1"
 
 [lints.rust]
 unsafe_code = "forbid"

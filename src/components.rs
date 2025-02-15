@@ -105,8 +105,8 @@ pub struct FileMetadata {
 
 impl FileMetadata {
     pub fn from_filename(filename: &str) -> Result<Self, String> {
-        // while possible, digging this out of datafusion is immensely painful.
-        // reading with parquet is mildly less so.
+        // While possible, digging this out of datafusion is immensely painful.
+        // Reading with parquet is mildly less so.
         let path = Path::new(filename);
         if let Ok(file) = File::open(path) {
             match SerializedFileReader::new(file) {
@@ -195,7 +195,7 @@ impl ParquetData {
         let initial_col_width = (ui.available_width() - style.spacing.scroll.bar_width)
             / (self.data.num_columns() + 1) as f32;
 
-        // stop columns from resizing to smaller than the window--remainder stops the last column
+        // Stop columns from resizing to smaller than the window--remainder stops the last column
         // growing, which we explicitly want to allow for the case of large datatypes.
         let min_col_width = if style.spacing.interact_size.x > initial_col_width {
             style.spacing.interact_size.x
@@ -247,24 +247,31 @@ impl ParquetData {
                 let mut value: String =
                     array_value_to_string(data_col, row_index).unwrap_or_default();
 
+                // Get the field for the current column index.
+                let field = schema.field(data_col_index);
+
                 let layout = if data_col.data_type().is_floating() {
+                    // Check if the column name contains "Alíquota"
+                    let col_aliquota = field.name().contains("Alíquota");
+
                     // Convert string to floating point number
                     value = match value.trim().parse::<f64>() {
                         Ok(float) => {
-                            // Get the field for the current column index.
-                            let field = schema.field(data_col_index);
-
-                            // Check if the column name contains "Aliquota".
-                            if field.name().contains("Alíquota") {
-                                format!("{float:0.4}") // Format to 4 decimal places if it does.
+                            // If column is Alíquota format to 4, else to 2 decimals
+                            if col_aliquota {
+                                format!("{float:0.4}") // Format to 4 decimal places if it is.
                             } else {
                                 format!("{float:0.2}") // Otherwise, format to 2 decimal places.
                             }
                         }
                         Err(_) => value,
                     };
-
-                    Layout::right_to_left(egui::Align::Center)
+                    // If column is Alíquota align center, else align right
+                    if col_aliquota {
+                        Layout::centered_and_justified(egui::Direction::LeftToRight)
+                    } else {
+                        Layout::right_to_left(egui::Align::Center)
+                    }
                 } else if data_col.data_type().is_integer() {
                     Layout::centered_and_justified(egui::Direction::LeftToRight)
                 } else {

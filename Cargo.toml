@@ -16,9 +16,9 @@ keywords = [
 [dependencies]
 anstyle = "1.0" # used by clap color
 clap = { version = "4.5", features = ["color", "derive"] }
-egui = "0.26"
-egui_extras = "0.26"
-eframe = { version = "0.26", features = ["persistence"] }
+egui = "0.31"
+egui_extras = "0.31"
+eframe = { version = "0.31", features = ["persistence"] }
 datafusion = "45.0"
 rfd = { version ="0.15", features = ["file-handle-inner"] }
 tokio = { version = "1.36", features = ["rt", "sync", "rt-multi-thread"] }

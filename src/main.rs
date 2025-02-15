@@ -26,14 +26,14 @@ fn main() -> eframe::Result<()> {
         "ParqBench",
         options,
         Box::new(move |cc| {
-            Box::new(match &args.filename {
+            Ok(Box::new(match &args.filename {
                 Some(filename) => {
                     DataFilters::debug(&args);
                     let future = ParquetData::load(filename.to_string());
                     ParqBenchApp::new_with_future(cc, Box::new(Box::pin(future)))
                 }
                 None => ParqBenchApp::new(cc),
-            })
+            }))
         }),
     )
 }

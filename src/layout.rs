@@ -232,7 +232,7 @@ impl eframe::App for ParqBenchApp {
                     let delta = ui.available_width() - 15.0;
                     if delta > 0.0 {
                         ui.add_space(delta);
-                        widgets::global_dark_light_mode_switch(ui);
+                        widgets::global_theme_preference_switch(ui);
                         //widgets::global_dark_light_mode_buttons(ui);
                     }
                 });
@@ -306,7 +306,7 @@ impl eframe::App for ParqBenchApp {
             };
 
             if self.check_data_pending() {
-                ui.set_enabled(false);
+                ui.disable();
                 if self.table.as_ref().is_none() {
                     ui.centered_and_justified(|ui| {
                         ui.spinner();

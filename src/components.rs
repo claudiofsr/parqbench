@@ -28,8 +28,8 @@ impl Popover for Settings {
             .collapsible(false)
             .open(&mut open)
             .show(ctx, |ui| {
-                ctx.style_ui(ui);
-                ui.set_enabled(false);
+                ctx.style_ui(ui, egui::Theme::Dark);
+                ui.disable();
             });
 
         open
@@ -49,7 +49,7 @@ impl Popover for Error {
             .open(&mut open)
             .show(ctx, |ui| {
                 ui.label(format!("Error: {}", self.message));
-                ui.set_enabled(false);
+                ui.disable();
             });
 
         open

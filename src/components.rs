@@ -1,4 +1,4 @@
-use datafusion::arrow::{datatypes::DataType, util::display::array_value_to_string};
+use datafusion::arrow::util::display::array_value_to_string;
 use egui::{Context, Layout, Response, TextStyle, Ui, WidgetText};
 use egui_extras::{Column, TableBuilder, TableRow};
 use parquet::{
@@ -109,10 +109,15 @@ impl FileMetadata {
         // reading with parquet is mildly less so.
         let path = Path::new(filename);
         if let Ok(file) = File::open(path) {
-            let reader = SerializedFileReader::new(file).unwrap();
-            Ok(Self {
-                info: reader.metadata().to_owned(),
-            })
+            match SerializedFileReader::new(file) {
+                Ok(reader) => Ok(Self {
+                    info: reader.metadata().to_owned(),
+                }),
+                Err(error) => {
+                    let msg = format!("fn from_filename()\n{}", error);
+                    Err(msg)
+                }
+            }
         } else {
             Err("Could not read metadata from file.".to_string())
         }
@@ -234,37 +239,46 @@ impl ParquetData {
         };
 
         let analyze_rows = |mut table_row: TableRow<'_, '_>| {
-            for data_col in self.data.columns() {
-                let row_index = table_row.index();
+            let row_index = table_row.index();
+            let schema = self.data.schema();
+
+            // Iterate through columns with their schema fields.
+            for (data_col_index, data_col) in self.data.columns().iter().enumerate() {
+                let mut value: String =
+                    array_value_to_string(data_col, row_index).unwrap_or_default();
+
+                let layout = if data_col.data_type().is_floating() {
+                    // Convert string to floating point number
+                    value = match value.trim().parse::<f64>() {
+                        Ok(float) => {
+                            // Get the field for the current column index.
+                            let field = schema.field(data_col_index);
+
+                            // Check if the column name contains "Aliquota".
+                            if field.name().contains("Alíquota") {
+                                format!("{float:0.4}") // Format to 4 decimal places if it does.
+                            } else {
+                                format!("{float:0.2}") // Otherwise, format to 2 decimal places.
+                            }
+                        }
+                        Err(_) => value,
+                    };
+
+                    Layout::right_to_left(egui::Align::Center)
+                } else if data_col.data_type().is_integer() {
+                    Layout::centered_and_justified(egui::Direction::LeftToRight)
+                } else {
+                    Layout::left_to_right(egui::Align::Center)
+                };
+
                 table_row.col(|ui| {
-                    // while not efficient (as noted in docs) we need to display
+                    // While not efficient (as noted in docs) we need to display
                     // at most a few dozen records at a time (barring pathological
                     // tables with absurd numbers of columns) and should still
                     // have conversion times on the order of ns.
-                    ui.with_layout(
-                        if is_integer(data_col.data_type()) {
-                            Layout::centered_and_justified(egui::Direction::LeftToRight)
-                        } else if is_float(data_col.data_type()) {
-                            Layout::right_to_left(egui::Align::Center)
-                        } else {
-                            Layout::left_to_right(egui::Align::Center)
-                        }
-                        .with_main_wrap(false),
-                        |ui| {
-                            let value: String =
-                                array_value_to_string(data_col, row_index).unwrap_or_default();
-                            /*
-                            if is_float(data_col.data_type()) {
-                                // convert string to floating point number
-                                value = match value.parse::<f64>() {
-                                    Ok(float) => format!("{float:0.4}"),
-                                    Err(_) => value,
-                                }
-                            }
-                            */
-                            ui.label(value);
-                        },
-                    );
+                    ui.with_layout(layout.with_main_wrap(false), |ui| {
+                        ui.label(value);
+                    });
                 });
             }
         };
@@ -283,19 +297,6 @@ impl ParquetData {
 
         filters
     }
-}
-
-fn is_integer(t: &DataType) -> bool {
-    use DataType::*;
-    matches!(
-        t,
-        UInt8 | UInt16 | UInt32 | UInt64 | Int8 | Int16 | Int32 | Int64
-    )
-}
-
-fn is_float(t: &DataType) -> bool {
-    use DataType::*;
-    matches!(t, Float32 | Float64)
 }
 
 impl SelectionDepth<String> for SortState {

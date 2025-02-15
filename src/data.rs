@@ -8,7 +8,14 @@ use datafusion::{
 };
 
 use crate::Arguments;
-use std::{ffi::IntoStringError, ffi::OsStr, future::Future, path::Path, str::FromStr, sync::Arc};
+use std::{
+    ffi::{IntoStringError, OsStr},
+    fmt::{Display, Formatter},
+    future::Future,
+    path::Path,
+    str::FromStr,
+    sync::Arc,
+};
 
 pub type DataResult = Result<ParquetData, String>;
 pub type DataFuture = Box<dyn Future<Output = DataResult> + Unpin + Send + 'static>;
@@ -46,9 +53,9 @@ impl FromStr for TableName {
     }
 }
 
-impl ToString for TableName {
-    fn to_string(&self) -> String {
-        self.name.to_string()
+impl Display for TableName {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
     }
 }
 
@@ -63,10 +70,7 @@ impl DataFilters {
     pub fn debug(args: &Arguments) {
         let args = args.clone();
 
-        let table_name = match args.table_name {
-            Some(tn) => tn,
-            None => TableName::default(),
-        };
+        let table_name = args.table_name.unwrap_or_default();
 
         let data_filters = DataFilters {
             query: args.query,

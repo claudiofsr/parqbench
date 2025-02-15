@@ -3,7 +3,7 @@
 
 use parqbench::{Arguments, DataFilters, ParqBenchApp, ParquetData};
 
-/**
+/*
     clear && cargo test -- --nocapture
     clear && cargo run -- --help
     cargo b -r && cargo install --path=.

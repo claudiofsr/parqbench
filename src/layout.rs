@@ -62,6 +62,9 @@ impl MyStyle for Context {
         ]
         .into();
 
+        style.spacing.item_spacing.x = 8.0;
+        style.spacing.item_spacing.y = 4.0;
+
         // Mutate global style with above changes
         self.set_style(style);
     }

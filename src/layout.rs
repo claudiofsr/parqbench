@@ -54,16 +54,16 @@ impl MyStyle for Context {
 
         // Redefine text_styles
         style.text_styles = [
-            (Small, FontId::new(14.0, Proportional)),
-            (Body, FontId::new(18.0, Proportional)),
-            (Monospace, FontId::new(16.0, Proportional)),
-            (Button, FontId::new(16.0, Proportional)),
-            (Heading, FontId::new(16.0, Proportional)),
+            (Small, FontId::new(12.0, Proportional)),
+            (Body, FontId::new(16.0, Proportional)),
+            (Monospace, FontId::new(14.0, Proportional)),
+            (Button, FontId::new(14.0, Proportional)),
+            (Heading, FontId::new(14.0, Proportional)),
         ]
         .into();
 
         style.spacing.item_spacing.x = 8.0;
-        style.spacing.item_spacing.y = 4.0;
+        style.spacing.item_spacing.y = 6.0;
 
         // Mutate global style with above changes
         self.set_style(style);

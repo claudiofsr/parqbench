@@ -20,6 +20,20 @@ use std::{
 pub type DataResult = Result<ParquetData, String>;
 pub type DataFuture = Box<dyn Future<Output = DataResult> + Unpin + Send + 'static>;
 
+/// Determines the Parquet read options based on the file extension.
+///
+/// This function extracts the file extension from the given filename and returns
+/// a `ParquetReadOptions` struct if a valid extension is found.  Currently,
+/// the only relevant option set is the `file_extension`.
+///
+/// # Arguments
+///
+/// * `filename` - The name of the file to be read.
+///
+/// # Returns
+///
+/// An `Option` containing the `ParquetReadOptions` if a valid extension is found,
+/// or `None` otherwise.
 fn get_read_options(filename: &str) -> Option<ParquetReadOptions<'_>> {
     Path::new(filename)
         .extension()
@@ -30,6 +44,7 @@ fn get_read_options(filename: &str) -> Option<ParquetReadOptions<'_>> {
         })
 }
 
+/// Represents a table name, used primarily for registering tables in DataFusion.
 #[derive(Debug, Clone)]
 pub struct TableName {
     pub name: String,
@@ -59,41 +74,80 @@ impl Display for TableName {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+/// Represents the sorting state for a column.
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum SortState {
+    /// The column is not sorted.
     NotSorted(String),
+    /// The column is sorted in ascending order.
     Ascending(String),
+    /// The column is sorted in descending order.
     Descending(String),
 }
 
+/// Holds filters to be applied to the data.
 #[derive(Clone, Debug, Default)]
 pub struct DataFilters {
+    /// Optional sorting state.
     pub sort: Option<SortState>,
-    pub table_name: TableName,
+    /// Optional table name for DataFusion registration.
+    pub table_name: Option<TableName>,
+    /// Optional SQL query to apply.
     pub query: Option<String>,
 }
 
 impl DataFilters {
+    /// Prints the debug information about the `DataFilters` based on the provided `Arguments`.
+    ///
+    /// This function clones the provided `Arguments`, creates a `DataFilters` instance with the
+    /// `query` and `table_name` fields from the arguments, and then prints the debug representation
+    /// of the created `DataFilters` instance using `dbg!`.
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - A reference to the `Arguments` struct containing the query and table name.
     pub fn debug(args: &Arguments) {
         let args = args.clone();
 
-        let table_name = args.table_name.unwrap_or_default();
-
         let data_filters = DataFilters {
             query: args.query,
-            table_name,
+            table_name: args.table_name,
             ..Default::default()
         };
 
         dbg!(data_filters);
     }
+
+    /// Retrieves the table name from the filters.
+    ///
+    /// If a table name is present in the filters, it returns the name.
+    /// Otherwise, it returns the default table name.
+    pub fn get_table_name(&self) -> String {
+        match self.table_name.as_ref() {
+            Some(tb) => tb.name.clone(),
+            None => TableName::default().name,
+        }
+    }
+
+    /// Retrieves the query from the filters.
+    ///
+    /// If a query is present in the filters, it returns the query.
+    /// Otherwise, it returns an empty string.
+    pub fn get_query(&self) -> String {
+        self.query.clone().unwrap_or_default()
+    }
 }
 
+/// Contains the Parquet data, filename, filters, and a DataFusion DataFrame.
 #[derive(Clone)]
 pub struct ParquetData {
+    /// The filename of the Parquet file.
     pub filename: String,
+    /// The data as a RecordBatch.
     pub data: RecordBatch,
+    /// The filters applied to the data.
     pub filters: DataFilters,
+    /// The DataFusion DataFrame.
     dataframe: Arc<DataFrame>,
 }
 
@@ -107,6 +161,7 @@ fn concat_record_batches(batches: &[RecordBatch]) -> Result<RecordBatch, ArrowEr
 }
 
 impl ParquetData {
+    /// Loads Parquet data from a file.
     pub async fn load(filename: String) -> Result<Self, String> {
         let filename = shellexpand::full(&filename)
             .map_err(|err| err.to_string())?
@@ -143,6 +198,7 @@ impl ParquetData {
         }
     }
 
+    /// Loads Parquet data from a file and applies a query.
     pub async fn load_with_query(filename: String, filters: DataFilters) -> Result<Self, String> {
         let filename = shellexpand::full(&filename)
             .map_err(|err| err.to_string())?
@@ -152,7 +208,7 @@ impl ParquetData {
 
         let ctx = SessionContext::new();
         ctx.register_parquet(
-            filters.table_name.to_string().as_str(),
+            filters.get_table_name(),
             &filename,
             get_read_options(&filename).ok_or(
                 "Could not set read options. Does this file have a valid extension?".to_string(),
@@ -183,6 +239,7 @@ impl ParquetData {
         }
     }
 
+    /// Sorts the data based on the provided filters.
     pub async fn sort(self, opt_filters: Option<DataFilters>) -> Result<Self, String> {
         match opt_filters {
             Some(filters) => match filters.sort.as_ref() {
@@ -234,6 +291,7 @@ impl ParquetData {
         }
     }
 
+    /// Returns the metadata of the DataFrame.
     pub fn metadata(&self) -> &DFSchema {
         self.dataframe.schema()
     }

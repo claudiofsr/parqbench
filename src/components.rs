@@ -66,8 +66,8 @@ impl QueryPane {
     pub fn new(filename: Option<String>, filters: DataFilters) -> Self {
         Self {
             filename: filename.unwrap_or_default(),
-            query: filters.query.unwrap_or_default(),
-            table_name: filters.table_name.to_string(),
+            query: filters.get_query(),
+            table_name: filters.get_table_name(),
         }
     }
 
@@ -87,9 +87,9 @@ impl QueryPane {
                 self.filename.clone(),
                 DataFilters {
                     query: Some(self.query.clone()),
-                    table_name: TableName {
+                    table_name: Some(TableName {
                         name: self.table_name.clone(),
-                    },
+                    }),
                     ..Default::default()
                 },
             ))

@@ -59,6 +59,13 @@ impl Display for TableName {
     }
 }
 
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub enum SortState {
+    NotSorted(String),
+    Ascending(String),
+    Descending(String),
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct DataFilters {
     pub sort: Option<SortState>,
@@ -88,13 +95,6 @@ pub struct ParquetData {
     pub data: RecordBatch,
     pub filters: DataFilters,
     dataframe: Arc<DataFrame>,
-}
-
-#[derive(PartialEq, Eq, Clone, Debug)]
-pub enum SortState {
-    NotSorted(String),
-    Ascending(String),
-    Descending(String),
 }
 
 /// Concatenates an array of RecordBatch into one batch

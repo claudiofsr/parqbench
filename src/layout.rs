@@ -9,19 +9,30 @@ use egui::{
 };
 
 use std::sync::Arc;
-use tokio::sync::oneshot::error::TryRecvError;
+use tokio::sync::oneshot::{self, error::TryRecvError};
 
 use crate::components::{file_dialog, Error, FileMetadata, Popover, QueryPane, Settings};
-use crate::data::{DataFilters, DataFuture, DataResult, ParquetData};
+use crate::data::{DataFilters, DataFuture, ParquetData};
 
+/// The main application struct for ParqBench.
 pub struct ParqBenchApp {
+    /// An `Arc` to the loaded Parquet data. Using `Arc` for shared ownership and thread-safe access.
     pub table: Arc<Option<ParquetData>>,
+    /// The query pane component for filtering and querying data.
     pub query_pane: QueryPane,
+    /// Metadata associated with the loaded Parquet file.
     pub metadata: Option<FileMetadata>,
+    /// An optional popover for displaying errors, settings, or other information.
     pub popover: Option<Box<dyn Popover>>,
 
+    /// The Tokio runtime for asynchronous operations.
     runtime: tokio::runtime::Runtime,
+    /// A channel for receiving the result of asynchronous data loading.
     pipe: Option<tokio::sync::oneshot::Receiver<Result<ParquetData, String>>>,
+
+    /// A vector of tasks to keep track of multiple concurrent operations.
+    /// This solves the FIXME about using a vector of tasks instead of a single one.
+    tasks: Vec<tokio::task::JoinHandle<()>>,
 }
 
 impl Default for ParqBenchApp {
@@ -32,15 +43,18 @@ impl Default for ParqBenchApp {
             runtime: tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
                 .build()
-                .unwrap(),
+                .expect("Failed to build Tokio runtime"),
             pipe: None,
             popover: None,
             metadata: None,
+            tasks: Vec::new(),
         }
     }
 }
 
+/// A trait for applying custom styling to the egui context.
 trait MyStyle {
+    /// Sets the initial style for the egui context.
     fn set_style_init(&self);
 }
 
@@ -55,9 +69,9 @@ impl MyStyle for Context {
         // Redefine text_styles
         style.text_styles = [
             (Small, FontId::new(12.0, Proportional)),
-            (Body, FontId::new(16.0, Proportional)),
+            (Body, FontId::new(18.0, Proportional)),
             (Monospace, FontId::new(14.0, Proportional)),
-            (Button, FontId::new(14.0, Proportional)),
+            (Button, FontId::new(16.0, Proportional)),
             (Heading, FontId::new(14.0, Proportional)),
         ]
         .into();
@@ -71,13 +85,14 @@ impl MyStyle for Context {
 }
 
 impl ParqBenchApp {
-    // TODO: re-export load, query, and sort.
+    /// Creates a new `ParqBenchApp`.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         cc.egui_ctx.set_visuals(Visuals::dark());
         cc.egui_ctx.set_style_init();
         Default::default()
     }
 
+    /// Creates a new `ParqBenchApp` with a pre-existing `DataFuture`.
     pub fn new_with_future(cc: &eframe::CreationContext<'_>, future: DataFuture) -> Self {
         let mut app: Self = Default::default();
         cc.egui_ctx.set_visuals(Visuals::dark());
@@ -86,6 +101,7 @@ impl ParqBenchApp {
         app
     }
 
+    /// Checks if a popover is active and displays it.  If the popover is closed, it is removed.
     pub fn check_popover(&mut self, ctx: &Context) {
         if let Some(popover) = &mut self.popover {
             if !popover.show(ctx) {
@@ -94,81 +110,75 @@ impl ParqBenchApp {
         }
     }
 
+    /// Checks if there is data loading pending.
+    ///
+    /// Returns `true` if data is still loading, `false` otherwise.
     pub fn check_data_pending(&mut self) -> bool {
-        // hide implementation details of waiting for data to load
-        // FIXME: should do some error handling/notification
-        match &mut self.pipe {
-            Some(output) => match output.try_recv() {
-                Ok(data) => match data {
-                    Ok(data) => {
-                        self.query_pane =
-                            QueryPane::new(Some(data.filename.clone()), data.filters.clone());
-                        self.metadata = if let Ok(metadata) =
-                            FileMetadata::from_filename(data.filename.as_str())
-                        {
-                            Some(metadata)
-                        } else {
-                            None
-                        };
-                        self.table = Arc::new(Some(data));
-                        self.pipe = None;
-                        false
-                    }
-                    Err(msg) => {
-                        self.pipe = None;
-                        self.popover = Some(Box::new(Error { message: msg }));
-                        false
-                    }
-                },
-                Err(e) => match e {
-                    TryRecvError::Empty => true,
-                    TryRecvError::Closed => {
-                        self.pipe = None;
-                        self.popover = Some(Box::new(Error {
-                            message: "Data operation terminated without response.".to_string(),
-                        }));
-                        false
-                    }
-                },
+        // Takes the value out of the self.pipe: Option<value>, leaving a None in its place.
+        let Some(mut output) = self.pipe.take() else {
+            return false;
+        };
+
+        match output.try_recv() {
+            Ok(data) => match data {
+                Ok(data) => {
+                    self.query_pane =
+                        QueryPane::new(Some(data.filename.clone()), data.filters.clone());
+                    self.metadata = FileMetadata::from_filename(data.filename.as_str()).ok();
+                    self.table = Arc::new(Some(data));
+                    false
+                }
+                Err(msg) => {
+                    self.popover = Some(Box::new(Error { message: msg }));
+                    false
+                }
             },
-            _ => false,
+            Err(error) => match error {
+                TryRecvError::Empty => {
+                    // If the channel is empty, put the receiver back.
+                    self.pipe = Some(output);
+                    true
+                }
+                TryRecvError::Closed => {
+                    self.popover = Some(Box::new(Error {
+                        message: "Data operation terminated without response.".to_string(),
+                    }));
+                    false
+                }
+            },
         }
     }
 
+    /// Runs a `DataFuture` to load Parquet data asynchronously.
     pub fn run_data_future(&mut self, future: DataFuture, ctx: &Context) {
-        if self.check_data_pending() {
-            // FIXME, use vec of tasks?
-            panic!("Cannot schedule future when future already running");
-        }
-        let (tx, rx) = tokio::sync::oneshot::channel::<Result<ParquetData, String>>();
+        // Before scheduling a new future, ensure no tasks are stuck
+        self.tasks.retain(|task| !task.is_finished());
+
+        let (tx, rx) = oneshot::channel::<Result<ParquetData, String>>();
         self.pipe = Some(rx);
 
-        async fn inner(
-            future: DataFuture,
-            ctx: Context,
-            tx: tokio::sync::oneshot::Sender<DataResult>,
-        ) {
-            let data = future.await;
-            let _result = tx.send(data);
-            ctx.request_repaint();
-        }
+        // Clone the context for use within the asynchronous task.
+        let ctx_clone = ctx.clone();
 
-        self.runtime.spawn(inner(future, ctx.clone(), tx));
+        // Spawn an async task to load the data.
+        let handle = self.runtime.spawn(async move {
+            let data = future.await;
+            if tx.send(data).is_err() {
+                eprintln!("Receiver dropped before data could be sent.");
+            }
+            ctx_clone.request_repaint(); // Request repaint to update the UI.
+        });
+
+        self.tasks.push(handle);
     }
 }
 
-// See
-// https://github.com/emilk/egui/blob/master/examples/custom_window_frame/src/main.rs
-// https://rodneylab.com/trying-egui/
-
 impl eframe::App for ParqBenchApp {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
-        //////////
         // Frame setup. Check if various interactions are in progress and resolve them
-        //////////
-
         self.check_popover(ctx);
 
+        // Handle dropped files.
         if let Some(dropped_file) = ctx.input(|i| i.raw.dropped_files.last().cloned()) {
             let filename: String = dropped_file
                 .path
@@ -179,12 +189,9 @@ impl eframe::App for ParqBenchApp {
             self.run_data_future(Box::new(Box::pin(ParquetData::load(filename))), ctx);
         }
 
-        //////////
         // Main UI layout.
-        //////////
-
-        //////////
-        //   Using static layout until I put together a TabTree that can make this dynamic
+        //
+        // Using static layout until I put together a TabTree that can make this dynamic
         //
         //   | menu_bar      widgets |
         //   -------------------------
@@ -194,8 +201,6 @@ impl eframe::App for ParqBenchApp {
         //   |       |               |
         //   -------------------------
         //   |  notification footer  |
-        //
-        //////////
 
         TopBottomPanel::top("top_panel").show(ctx, |ui| {
             menu::bar(ui, |ui| {
@@ -212,13 +217,11 @@ impl eframe::App for ParqBenchApp {
                         }
 
                         if ui.button("Settings").clicked() {
-                            // FIXME: need to manage potential for multiple popovers
                             self.popover = Some(Box::new(Settings {}));
                             ui.close_menu();
                         }
 
                         ui.menu_button("About", |ui| {
-                            // https://doc.rust-lang.org/cargo/reference/environment-variables.html
                             let version = env!("CARGO_PKG_VERSION");
                             let authors = env!("CARGO_PKG_AUTHORS");
                             ui.label(RichText::new("ParqBench").font(FontId::proportional(20.0)));
@@ -228,15 +231,15 @@ impl eframe::App for ParqBenchApp {
                         });
 
                         if ui.button("Quit").clicked() {
-                            //frame.close();
                             ui.ctx().send_viewport_cmd(ViewportCommand::Close);
                         }
                     });
+
+                    // Add spacing to align theme switch to the right.
                     let delta = ui.available_width() - 15.0;
                     if delta > 0.0 {
                         ui.add_space(delta);
                         widgets::global_theme_preference_switch(ui);
-                        //widgets::global_dark_light_mode_buttons(ui);
                     }
                 });
             });
@@ -245,7 +248,6 @@ impl eframe::App for ParqBenchApp {
         SidePanel::left("side_panel")
             .resizable(true)
             .show(ctx, |ui| {
-                // TODO: collapsing headers
                 ScrollArea::vertical().show(ui, |ui| {
                     ui.collapsing("Query", |ui| {
                         let filters = self.query_pane.render(ui);
@@ -256,11 +258,13 @@ impl eframe::App for ParqBenchApp {
                             );
                         }
                     });
+
                     if let Some(metadata) = &self.metadata {
                         ui.collapsing("Metadata", |ui| {
                             metadata.render_metadata(ui);
                         });
                     }
+
                     if let Some(metadata) = &self.metadata {
                         ui.collapsing("Schema", |ui| {
                             metadata.render_schema(ui);
@@ -280,14 +284,7 @@ impl eframe::App for ParqBenchApp {
             });
         });
 
-        // main table
-        // https://whoisryosuke.com/blog/2023/getting-started-with-egui-in-rust
-        // https://github.com/emilk/egui/issues/1376
-        // https://github.com/emilk/egui/discussions/3069
-        // https://github.com/lucasmerlin/hello_egui/blob/main/crates/egui_dnd/examples/horizontal.rs
-        // https://github.com/vvv/egui-table-click/blob/table-row-framing/src/lib.rs
-        // https://github.com/emilk/eframe_template/blob/4f613f5d6266f0f0888544df4555e6bc77a5d079/src/app.rs
-        // FIXME: How to expand/wrap table size to maximum visible size?
+        // Main table
         CentralPanel::default().show(ctx, |ui| {
             warn_if_debug_build(ui);
 
@@ -295,8 +292,8 @@ impl eframe::App for ParqBenchApp {
                 Some(parquet_data) if parquet_data.data.num_columns() > 0 => {
                     ScrollArea::horizontal().show(ui, |ui| {
                         let opt_filters = parquet_data.render_table(ui);
-                        if opt_filters.is_some() {
-                            let future = parquet_data.sort(opt_filters);
+                        if let Some(filters) = opt_filters {
+                            let future = parquet_data.sort(Some(filters));
                             self.run_data_future(Box::new(Box::pin(future)), ctx);
                         }
                     });
@@ -312,7 +309,7 @@ impl eframe::App for ParqBenchApp {
                 ui.disable();
                 if self.table.as_ref().is_none() {
                     ui.centered_and_justified(|ui| {
-                        ui.spinner();
+                        ui.spinner(); // Show spinner while loading initial data.
                     });
                 }
             }

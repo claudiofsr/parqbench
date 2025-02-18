@@ -114,7 +114,7 @@ pub struct ParquetData {
     /// The filename of the Parquet file.
     pub filename: String,
     /// The data as a RecordBatch.
-    pub data: RecordBatch,
+    pub data: Arc<RecordBatch>,
     /// The filters applied to the data.
     pub filters: DataFilters,
     /// The DataFusion DataFrame.
@@ -160,7 +160,7 @@ impl ParquetData {
 
         Ok(ParquetData {
             filename,
-            data: record_batch,
+            data: record_batch.into(),
             dataframe: df.into(),
             filters: DataFilters::default(),
         })
@@ -195,7 +195,7 @@ impl ParquetData {
 
         let parquet_data = ParquetData {
             filename,
-            data: record_batch,
+            data: record_batch.into(),
             dataframe: df.into(),
             filters,
         };
@@ -225,19 +225,20 @@ impl ParquetData {
 
         let df: DataFrame = self.dataframe.as_ref().clone();
         let exp = col(col_name).sort(ascending, false);
-        let sorted = df
+        let df_sorted = df
             .sort(vec![exp])
             .map_err(|e| format!("Unable to sort column '{col_name}': {}", e))?;
 
-        let vec_record_batch = sorted
+        let vec_record_batch = df_sorted
             .clone()
             .collect()
             .await
             .map_err(|e| format!("Error collecting sorted data: {}", e))?;
 
         self.data = concat_record_batches(&vec_record_batch)
-            .map_err(|e| format!("Error concatenating sorted batches: {}", e))?;
-        self.dataframe = sorted.into(); //Update dataframe
+            .map_err(|e| format!("Error concatenating sorted batches: {}", e))?
+            .into();
+        self.dataframe = df_sorted.into(); //Update dataframe
         self.filters = filters; //Update filters
 
         Ok(self)

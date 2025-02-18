@@ -253,6 +253,14 @@ impl eframe::App for ParqBenchApp {
             .resizable(true)
             .show(ctx, |ui| {
                 ScrollArea::vertical().show(ui, |ui| {
+                    // add Metadata
+                    if let Some(metadata) = &self.metadata {
+                        ui.collapsing("Metadata", |ui| {
+                            metadata.render_metadata(ui);
+                        });
+                    }
+
+                    // add Query
                     ui.collapsing("Query", |ui| {
                         let filters = self.query_pane.render(ui);
                         if let Some((filename, filters)) = filters {
@@ -263,12 +271,7 @@ impl eframe::App for ParqBenchApp {
                         }
                     });
 
-                    if let Some(metadata) = &self.metadata {
-                        ui.collapsing("Metadata", |ui| {
-                            metadata.render_metadata(ui);
-                        });
-                    }
-
+                    // add Schema
                     if let Some(metadata) = &self.metadata {
                         ui.collapsing("Schema", |ui| {
                             metadata.render_schema(ui);

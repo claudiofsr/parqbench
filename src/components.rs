@@ -4,7 +4,7 @@ use egui_extras::{Column, TableBuilder, TableRow};
 use parquet::{
     basic::ColumnOrder,
     file::{
-        metadata::{KeyValue, ParquetMetaData},
+        metadata::ParquetMetaData,
         reader::{FileReader, SerializedFileReader},
     },
 };
@@ -145,21 +145,11 @@ impl FileMetadata {
             file_metadata.created_by().unwrap_or("unknown") // Display creator.
         ));
         ui.label(format!("row groups: {}", self.info.num_row_groups())); // Display row groups.
-        ui.label(format!("rows: {}", file_metadata.num_rows())); // Display number of rows.
         ui.label(format!(
             "columns: {}",
             file_metadata.schema_descr().num_columns() // Display number of columns.
         ));
-        if let Some(key_value) = file_metadata.key_value_metadata() {
-            // Display key-value metadata.
-            for KeyValue { key, value } in key_value {
-                ui.label(format!(
-                    "{}: {}",
-                    key,
-                    value.to_owned().unwrap_or_else(|| "-".to_string()) // Display key-value pairs.
-                ));
-            }
-        }
+        ui.label(format!("rows: {}", file_metadata.num_rows())); // Display number of rows.
     }
 
     // Renders the file schema in the UI.

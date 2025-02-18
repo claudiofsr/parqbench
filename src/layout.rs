@@ -69,9 +69,9 @@ impl MyStyle for Context {
         // Redefine text_styles
         style.text_styles = [
             (Small, FontId::new(12.0, Proportional)),
-            (Body, FontId::new(18.0, Proportional)),
+            (Body, FontId::new(16.0, Proportional)),
             (Monospace, FontId::new(14.0, Proportional)),
-            (Button, FontId::new(16.0, Proportional)),
+            (Button, FontId::new(14.0, Proportional)),
             (Heading, FontId::new(14.0, Proportional)),
         ]
         .into();

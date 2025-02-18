@@ -173,6 +173,10 @@ impl ParqBenchApp {
     }
 }
 
+// See
+// https://github.com/emilk/egui/blob/master/examples/custom_window_frame/src/main.rs
+// https://rodneylab.com/trying-egui/
+
 impl eframe::App for ParqBenchApp {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
         // Frame setup. Check if various interactions are in progress and resolve them
@@ -193,14 +197,14 @@ impl eframe::App for ParqBenchApp {
         //
         // Using static layout until I put together a TabTree that can make this dynamic
         //
-        //   | menu_bar      widgets |
-        //   -------------------------
-        //   |       |               |
-        //   | query |     main      |
-        //   | info  |     table     |
-        //   |       |               |
-        //   -------------------------
-        //   |  notification footer  |
+        //  | menu_bar      widgets |
+        //  -------------------------
+        //  |       |               |
+        //  | query |     main      |
+        //  | info  |     table     |
+        //  |       |               |
+        //  -------------------------
+        //  |  notification footer  |
 
         TopBottomPanel::top("top_panel").show(ctx, |ui| {
             menu::bar(ui, |ui| {
@@ -285,6 +289,13 @@ impl eframe::App for ParqBenchApp {
         });
 
         // Main table
+        // https://whoisryosuke.com/blog/2023/getting-started-with-egui-in-rust
+        // https://github.com/emilk/egui/issues/1376
+        // https://github.com/emilk/egui/discussions/3069
+        // https://github.com/lucasmerlin/hello_egui/blob/main/crates/egui_dnd/examples/horizontal.rs
+        // https://github.com/vvv/egui-table-click/blob/table-row-framing/src/lib.rs
+        // https://github.com/emilk/eframe_template/blob/4f613f5d6266f0f0888544df4555e6bc77a5d079/src/app.rs
+
         CentralPanel::default().show(ctx, |ui| {
             warn_if_debug_build(ui);
 
@@ -309,7 +320,8 @@ impl eframe::App for ParqBenchApp {
                 ui.disable();
                 if self.table.as_ref().is_none() {
                     ui.centered_and_justified(|ui| {
-                        ui.spinner(); // Show spinner while loading initial data.
+                        // Show spinner while loading initial data.
+                        ui.spinner();
                     });
                 }
             }

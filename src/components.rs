@@ -89,9 +89,8 @@ impl QueryPane {
         ui.label("Query:".to_string());
         ui.text_edit_singleline(&mut self.query); // Text input for query.
 
-        let submit = ui.button("Apply"); // Apply button.
-        if submit.clicked() && !self.query.is_empty() {
-            // If the button is clicked and the query is not empty:
+        // If the button is clicked and the query is not empty:
+        if ui.button("Apply").clicked() && !self.query.is_empty() {
             Some((
                 self.filename.clone(), // Clone the filename.
                 DataFilters {

@@ -1,3 +1,6 @@
+use crate::components::{file_dialog, Error, FileMetadata, Popover, QueryPane, Settings};
+use crate::data::{DataFilters, DataFuture, ParquetData};
+
 use egui::{
     menu,
     style::Visuals,
@@ -7,12 +10,8 @@ use egui::{
     TextStyle::{Body, Button, Heading, Monospace, Small},
     TopBottomPanel, ViewportCommand,
 };
-
 use std::sync::Arc;
 use tokio::sync::oneshot::{self, error::TryRecvError};
-
-use crate::components::{file_dialog, Error, FileMetadata, Popover, QueryPane, Settings};
-use crate::data::{DataFilters, DataFuture, ParquetData};
 
 /// The main application struct for ParqBench.
 pub struct ParqBenchApp {

@@ -1,12 +1,11 @@
+use crate::Arguments;
+
 use datafusion::{
-    arrow::compute::concat_batches,
-    arrow::{error::ArrowError, record_batch::RecordBatch},
+    arrow::{compute::concat_batches, error::ArrowError, record_batch::RecordBatch},
     dataframe::DataFrame,
     logical_expr::col,
     prelude::{ParquetReadOptions, SessionContext},
 };
-
-use crate::Arguments;
 use std::{
     ffi::{IntoStringError, OsStr},
     fmt::{Display, Formatter},

@@ -1,13 +1,9 @@
 use datafusion::arrow::util::display::array_value_to_string;
 use egui::{Context, Layout, Response, TextStyle, Ui, WidgetText};
 use egui_extras::{Column, TableBuilder, TableRow};
-use parquet::{
-    basic::ColumnOrder,
-    file::{
-        metadata::ParquetMetaData,
-        reader::{FileReader, SerializedFileReader},
-    },
-};
+use parquet::basic::ColumnOrder;
+use parquet::file::reader::FileReader;
+use parquet::file::{metadata::ParquetMetaData, reader::SerializedFileReader};
 use rfd::AsyncFileDialog;
 use std::{fs::File, path::Path};
 
@@ -176,7 +172,8 @@ impl FileMetadata {
                 ui.label(format!(
                     "sort_order: {}",
                     match file_metadata.column_order(idx) {
-                        ColumnOrder::TYPE_DEFINED_ORDER(sort_order) => format!("{}", sort_order), // Display sort order.
+                        // Display sort order.
+                        ColumnOrder::TYPE_DEFINED_ORDER(sort_order) => format!("{}", sort_order),
                         _ => "undefined".to_string(),
                     }
                 ));

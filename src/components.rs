@@ -139,17 +139,25 @@ impl FileMetadata {
     // Renders the file metadata in the UI.
     pub fn render_metadata(&self, ui: &mut Ui) {
         let file_metadata = self.info.file_metadata(); // Get file metadata.
-        ui.label(format!("version: {}", file_metadata.version())); // Display version.
-        ui.label(format!(
-            "created by: {}",
-            file_metadata.created_by().unwrap_or("unknown") // Display creator.
-        ));
-        ui.label(format!("row groups: {}", self.info.num_row_groups())); // Display row groups.
-        ui.label(format!(
-            "columns: {}",
-            file_metadata.schema_descr().num_columns() // Display number of columns.
-        ));
-        ui.label(format!("rows: {}", file_metadata.num_rows())); // Display number of rows.
+
+        // Start a ui with vertical layout. Widgets will be left-justified.
+        ui.vertical(|ui| {
+            let metadata_created_by = file_metadata.created_by().unwrap_or("unknown");
+            let version = format!("version: {}", file_metadata.version());
+            let created_by = format!("created by: {}", metadata_created_by);
+            let row_groups = format!("row groups: {}", self.info.num_row_groups());
+            let columns = format!("columns: {}", file_metadata.schema_descr().num_columns());
+            let rows = format!("rows: {}", file_metadata.num_rows());
+
+            ui.label(version); // Display version.
+            ui.label(created_by);
+            ui.label(row_groups);
+            ui.label(columns);
+            ui.label(rows);
+
+            // Set the minimum width of the ui.
+            ui.set_min_width(200.0);
+        });
     }
 
     // Renders the file schema in the UI.

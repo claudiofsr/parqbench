@@ -13,6 +13,38 @@ use egui::{
 use std::sync::Arc;
 use tokio::sync::oneshot::{self, error::TryRecvError};
 
+/// A trait for applying custom styling to the egui context.
+trait MyStyle {
+    /// Sets the initial style for the egui context.
+    fn set_style_init(&self);
+}
+
+impl MyStyle for Context {
+    /// Specifies the look and feel of egui.
+    ///
+    /// <https://docs.rs/egui/latest/egui/style/struct.Style.html>
+    fn set_style_init(&self) {
+        // Get current context style
+        let mut style = (*self.style()).clone();
+
+        // Redefine text_styles
+        style.text_styles = [
+            (Small, FontId::new(12.0, Proportional)),
+            (Body, FontId::new(16.0, Proportional)),
+            (Monospace, FontId::new(14.0, Proportional)),
+            (Button, FontId::new(14.0, Proportional)),
+            (Heading, FontId::new(14.0, Proportional)),
+        ]
+        .into();
+
+        style.spacing.item_spacing.x = 8.0;
+        style.spacing.item_spacing.y = 6.0;
+
+        // Mutate global style with above changes
+        self.set_style(style);
+    }
+}
+
 /// The main application struct for ParqBench.
 pub struct ParqBenchApp {
     /// An `Arc` to the loaded Parquet data. Using `Arc` for shared ownership and thread-safe access.
@@ -48,38 +80,6 @@ impl Default for ParqBenchApp {
             metadata: None,
             tasks: Vec::new(),
         }
-    }
-}
-
-/// A trait for applying custom styling to the egui context.
-trait MyStyle {
-    /// Sets the initial style for the egui context.
-    fn set_style_init(&self);
-}
-
-impl MyStyle for Context {
-    /// Specifies the look and feel of egui.
-    ///
-    /// <https://docs.rs/egui/latest/egui/style/struct.Style.html>
-    fn set_style_init(&self) {
-        // Get current context style
-        let mut style = (*self.style()).clone();
-
-        // Redefine text_styles
-        style.text_styles = [
-            (Small, FontId::new(12.0, Proportional)),
-            (Body, FontId::new(16.0, Proportional)),
-            (Monospace, FontId::new(14.0, Proportional)),
-            (Button, FontId::new(14.0, Proportional)),
-            (Heading, FontId::new(14.0, Proportional)),
-        ]
-        .into();
-
-        style.spacing.item_spacing.x = 8.0;
-        style.spacing.item_spacing.y = 6.0;
-
-        // Mutate global style with above changes
-        self.set_style(style);
     }
 }
 
@@ -183,13 +183,14 @@ impl eframe::App for ParqBenchApp {
 
         // Handle dropped files.
         if let Some(dropped_file) = ctx.input(|i| i.raw.dropped_files.last().cloned()) {
-            let filename: String = dropped_file
-                .path
-                .into_iter()
-                .map(|p| p.display().to_string())
-                .collect();
-
-            self.run_data_future(Box::new(Box::pin(ParquetData::load(filename))), ctx);
+            if let Some(path) = dropped_file.path {
+                if let Some(filename) = path.as_os_str().to_str() {
+                    self.run_data_future(
+                        Box::new(Box::pin(ParquetData::load(filename.to_string()))),
+                        ctx,
+                    );
+                }
+            }
         }
 
         // Main UI layout.

@@ -1,5 +1,5 @@
 #![warn(clippy::all)]
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release builds
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 use parqbench::{Arguments, DataFilters, ParqBenchApp, ParquetData};
 
@@ -12,13 +12,13 @@ cargo b -r && cargo install --path=.
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result<()> {
-    // Initialize the logger.
+    // Initialize the tracing subscriber for logging.
     tracing_subscriber::fmt::init();
 
     // Parse command-line arguments.
     let args = Arguments::build();
 
-    // Configure the native window options.
+    // Configure the native options for the eframe application.
     let options = eframe::NativeOptions {
         centered: true,
         persist_window: true,
@@ -30,22 +30,19 @@ fn main() -> eframe::Result<()> {
         "ParqBench",
         options,
         Box::new(move |cc| {
-            // Create the ParqBench application based on whether a filename is provided.
+            // Create a new ParqBenchApp. If a filename is provided, load the data.
             Ok(Box::new(match &args.filename {
                 Some(filename) => {
-                    // Debug the data filters.
+                    // Log debug information about the data filters.
                     DataFilters::debug(&args);
 
-                    // Load Parquet data from the specified file.
+                    // Load the Parquet data from the specified filename.
                     let future = ParquetData::load(filename.to_string());
 
-                    // Create the ParqBench application with the data loading future.
+                    // Create a new ParqBenchApp with the data loading future.
                     ParqBenchApp::new_with_future(cc, Box::new(Box::pin(future)))
                 }
-                None => {
-                    // Create a default ParqBench application if no filename is provided.
-                    ParqBenchApp::new(cc)
-                }
+                None => ParqBenchApp::new(cc), // Create a new ParqBenchApp without loading data.
             }))
         }),
     )

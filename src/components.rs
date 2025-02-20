@@ -1,14 +1,17 @@
+use crate::data::{DataFilters, ParquetData, SortState};
+
 use datafusion::arrow::util::display::array_value_to_string;
 use egui::{Context, Layout, Response, TextStyle, Ui, WidgetText};
 use egui_extras::{Column, TableBuilder, TableRow};
-use parquet::basic::ColumnOrder;
-use parquet::file::reader::FileReader;
-use parquet::file::{metadata::ParquetMetaData, reader::SerializedFileReader};
+use parquet::{
+    basic::ColumnOrder,
+    file::{
+        metadata::ParquetMetaData,
+        reader::{FileReader, SerializedFileReader},
+    },
+};
 use rfd::AsyncFileDialog;
 use std::{fs::File, path::Path};
-
-use crate::data::{DataFilters, ParquetData, SortState};
-use crate::TableName;
 
 // Trait for popover windows.
 pub trait Popover {
@@ -66,7 +69,7 @@ pub struct QueryPane {
 
 impl QueryPane {
     // Creates a new QueryPane instance.
-    pub fn new(filename: Option<String>, filters: DataFilters) -> Self {
+    pub fn new(filename: Option<String>, filters: &DataFilters) -> Self {
         Self {
             filename: filename.unwrap_or_default(), // Use default if no filename provided.
             query: filters.get_query(),             // Initialize query from DataFilters.
@@ -91,9 +94,7 @@ impl QueryPane {
                 self.filename.clone(), // Clone the filename.
                 DataFilters {
                     query: Some(self.query.clone()), // Clone the query.
-                    table_name: Some(TableName {
-                        name: self.table_name.clone(), // Clone the table name.
-                    }),
+                    table_name: Some(self.table_name.clone()),
                     ..Default::default() // Use default values for other fields.
                 },
             ))
@@ -188,7 +189,7 @@ impl ParquetData {
         let style = ui.style().as_ref();
 
         // Helper function to check if a column is sorted.
-        fn is_sorted_column(sorted_col: &Option<SortState>, col: String) -> bool {
+        fn is_sorted_column(sorted_col: &Option<SortState>, col: &str) -> bool {
             match sorted_col {
                 Some(sort) => match sort {
                     SortState::Ascending(sorted_col) => *sorted_col == col,
@@ -229,8 +230,7 @@ impl ParquetData {
                 // Iterate through the columns/fields.
                 table_row.col(|ui| {
                     // Render in a column.
-                    let column_label = if is_sorted_column(&sorted_column, field.name().to_string())
-                    {
+                    let column_label = if is_sorted_column(&sorted_column, field.name()) {
                         sorted_column.clone().unwrap() // Display sort state if sorted.
                     } else {
                         SortState::NotSorted(field.name().to_string()) // Default to not sorted.
@@ -321,6 +321,17 @@ impl ParquetData {
     }
 }
 
+// Trait for selection depth, used for sort state.
+pub trait SelectionDepth<Icon> {
+    fn inc(&self) -> Self; // Increment the selection depth/state.
+
+    fn reset(&self) -> Self; // Reset the selection depth/state.
+
+    fn format(&self) -> Icon
+    where
+        Icon: Into<WidgetText>; // Format the selection depth/state.
+}
+
 // Trait implementation to increment the sort state.
 impl SelectionDepth<String> for SortState {
     fn inc(&self) -> Self {
@@ -347,17 +358,6 @@ impl SelectionDepth<String> for SortState {
             SortState::NotSorted(col) => format!("\u{2195} {}", col),  // Format for Not Sorted.
         }
     }
-}
-
-// Trait for selection depth, used for sort state.
-pub trait SelectionDepth<Icon> {
-    fn inc(&self) -> Self; // Increment the selection depth/state.
-
-    fn reset(&self) -> Self; // Reset the selection depth/state.
-
-    fn format(&self) -> Icon
-    where
-        Icon: Into<WidgetText>; // Format the selection depth/state.
 }
 
 // Trait for extra UI interactions.

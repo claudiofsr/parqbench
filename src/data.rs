@@ -1,19 +1,13 @@
 use crate::Arguments;
 
 use datafusion::{
-    arrow::{compute::concat_batches, error::ArrowError, record_batch::RecordBatch},
+    arrow::compute::concat_batches,
+    arrow::{error::ArrowError, record_batch::RecordBatch},
     dataframe::DataFrame,
     logical_expr::col,
     prelude::{ParquetReadOptions, SessionContext},
 };
-use std::{
-    ffi::{IntoStringError, OsStr},
-    fmt::{Display, Formatter},
-    future::Future,
-    path::Path,
-    str::FromStr,
-    sync::Arc,
-};
+use std::{ffi::OsStr, future::Future, path::Path, sync::Arc};
 
 pub type DataResult = Result<ParquetData, String>;
 pub type DataFuture = Box<dyn Future<Output = DataResult> + Unpin + Send + 'static>;
@@ -27,36 +21,6 @@ fn get_read_options(filename: &str) -> Option<ParquetReadOptions<'_>> {
             file_extension: s,
             ..Default::default()
         })
-}
-
-/// Represents a table name, used primarily for registering tables in DataFusion.
-#[derive(Debug, Clone)]
-pub struct TableName {
-    pub name: String,
-}
-
-impl Default for TableName {
-    fn default() -> Self {
-        Self {
-            name: "main".to_string(),
-        }
-    }
-}
-
-impl FromStr for TableName {
-    type Err = IntoStringError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self {
-            name: s.to_string(),
-        })
-    }
-}
-
-impl Display for TableName {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.name)
-    }
 }
 
 /// Represents the sorting state for a column.
@@ -73,20 +37,20 @@ pub enum SortState {
 /// Holds filters to be applied to the data.
 #[derive(Clone, Debug, Default)]
 pub struct DataFilters {
-    /// Optional sorting state.
-    pub sort: Option<SortState>,
     /// Optional table name for DataFusion registration.
-    pub table_name: Option<TableName>,
+    pub table_name: Option<String>,
     /// Optional SQL query to apply.
     pub query: Option<String>,
+    /// Optional sorting state.
+    pub sort: Option<SortState>,
 }
 
 impl DataFilters {
     /// Prints the debug information about the `DataFilters` based on the provided `Arguments`.
     pub fn debug(args: &Arguments) {
         let data_filters = DataFilters {
-            query: args.query.clone(),           //Avoid clone()
-            table_name: args.table_name.clone(), //Avoid clone()
+            query: args.query.clone(),
+            table_name: args.table_name.clone(),
             ..Default::default()
         };
 
@@ -96,9 +60,8 @@ impl DataFilters {
     /// Retrieves the table name from the filters.
     pub fn get_table_name(&self) -> String {
         self.table_name
-            .as_ref()
-            .map(|tb| tb.name.clone())
-            .unwrap_or_else(|| TableName::default().name)
+            .clone()
+            .unwrap_or_else(|| "main".to_string())
     }
 
     /// Retrieves the query from the filters.

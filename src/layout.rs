@@ -70,7 +70,7 @@ impl Default for ParqBenchApp {
     fn default() -> Self {
         Self {
             table: Arc::new(None),
-            query_pane: QueryPane::new(None, DataFilters::default()),
+            query_pane: QueryPane::new(None, &DataFilters::default()),
             runtime: tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
                 .build()
@@ -121,8 +121,7 @@ impl ParqBenchApp {
         match output.try_recv() {
             Ok(data) => match data {
                 Ok(data) => {
-                    self.query_pane =
-                        QueryPane::new(Some(data.filename.clone()), data.filters.clone());
+                    self.query_pane = QueryPane::new(Some(data.filename.clone()), &data.filters);
                     self.metadata = FileMetadata::from_filename(data.filename.as_str()).ok();
                     self.table = Arc::new(Some(data));
                     false
@@ -183,8 +182,8 @@ impl eframe::App for ParqBenchApp {
 
         // Handle dropped files.
         if let Some(dropped_file) = ctx.input(|i| i.raw.dropped_files.last().cloned()) {
-            if let Some(path) = dropped_file.path {
-                if let Some(filename) = path.as_os_str().to_str() {
+            if let Some(path) = &dropped_file.path {
+                if let Some(filename) = path.to_str() {
                     self.run_data_future(
                         Box::new(Box::pin(ParquetData::load(filename.to_string()))),
                         ctx,

@@ -261,8 +261,7 @@ impl eframe::App for ParqBenchApp {
 
                     // add Query
                     ui.collapsing("Query", |ui| {
-                        let filters = self.query_pane.render(ui);
-                        if let Some((filename, filters)) = filters {
+                        if let Some((filename, filters)) = self.query_pane.render(ui) {
                             self.run_data_future(
                                 Box::new(Box::pin(ParquetData::load_with_query(filename, filters))),
                                 ctx,

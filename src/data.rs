@@ -37,6 +37,8 @@ pub enum SortState {
 /// Holds filters to be applied to the data.
 #[derive(Clone, Debug, Default)]
 pub struct DataFilters {
+    /// Optional filename 
+    // pub filename: Option<String>,
     /// Optional table name for DataFusion registration.
     pub table_name: Option<String>,
     /// Optional SQL query to apply.

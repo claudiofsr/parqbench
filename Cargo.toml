@@ -1,13 +1,13 @@
 [package]
 name = "parqbench"
 version = "0.3.0"
-edition = "2021"
+edition = "2024"
 license = "GPL-3.0-or-later"
 authors = [
     "Connor Keane <connor.keane@kxnr.me", 
     "Claudio Fernandes de Souza Rodrigues <claudiofsrodrigues@gmail.com>",
 ]
-rust-version = "1.75"
+rust-version = "1.85"
 description = "A utility for viewing parquet files built on egui."
 keywords = [
     "parquet",

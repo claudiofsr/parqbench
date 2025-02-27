@@ -1,11 +1,11 @@
 use crate::SortState;
 
 use egui::{
-    Context,
+    Align, Color32, Context,
     FontFamily::Proportional,
-    FontId, Response,
+    FontId, Frame, Layout, Response, Stroke,
     TextStyle::{Body, Button, Heading, Monospace, Small},
-    Ui, WidgetText,
+    Ui, Vec2, WidgetText, Window,
 };
 
 /// A trait for applying custom styling to the egui context.
@@ -65,25 +65,44 @@ impl Popover for Settings {
     }
 }
 
-// Error popover struct.
+/// Error popover struct.
 pub struct Error {
+    /// The error message to display.
     pub message: String,
 }
 
 impl Popover for Error {
+    /// Shows the error popover window.
     fn show(&mut self, ctx: &Context) -> bool {
         let mut open = true;
 
         // Create a window named "Error".
-        egui::Window::new("Error")
+        Window::new("Error")
             .collapsible(false) // Make the window non-collapsible.
             .open(&mut open) // Control the window's open state.
             .show(ctx, |ui| {
-                ui.label(format!("Error: {}", self.message)); // Display the error message.
-                ui.disable(); // Disable user interaction.
+                // Calculate the maximum width for the content within the window.
+                let width_max = ui.available_width() * 0.80;
+
+                // Allocate the UI space with a specific layout.
+                ui.allocate_ui_with_layout(
+                    Vec2::new(width_max, ui.available_height()), // Set the size of the allocated space.
+                    Layout::top_down(Align::LEFT), // Arrange elements from top to bottom, aligned to the left.
+                    |ui| {
+                        // Use a frame to visually group the error message.
+                        Frame::default()
+                            .stroke(Stroke::new(1.0, Color32::GRAY)) // Add a thin gray border for visual separation.
+                            .outer_margin(2.0) // Set a margin outside the frame.
+                            .inner_margin(10.0) // Set a margin inside the frame.
+                            .show(ui, |ui| {
+                                ui.label(self.message.clone()); // Display the error message.
+                                ui.disable(); // Disable user interaction.
+                            });
+                    },
+                );
             });
 
-        open // Return whether the window is open.
+        open // Return whether the window is open. The window will close if `open` is set to `false` elsewhere.
     }
 }
 

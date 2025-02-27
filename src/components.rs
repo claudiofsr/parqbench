@@ -16,29 +16,87 @@ use polars::prelude::*;
 use rfd::AsyncFileDialog;
 use std::{fs::File, path::Path};
 
-// Struct to hold Parquet file metadata.  This is used for reading Parquet-specific metadata.
-pub struct FileMetadata {
+// Enum to represent file metadata, supporting Parquet and CSV
+pub enum FileMetadata {
+    Parquet(ParquetMetadataWrapper),
+    Csv(CsvMetadataWrapper),
+}
+
+// Wrapper struct for Parquet metadata
+pub struct ParquetMetadataWrapper {
     info: ParquetMetaData, // Parquet metadata.
+}
+
+// Wrapper struct for CSV metadata.
+// Currently, this only holds the schema as there's no direct metadata like Parquet.
+pub struct CsvMetadataWrapper {
+    schema: Arc<Schema>,
+    row_count: usize,
 }
 
 impl FileMetadata {
     /// Creates a `FileMetadata` instance from a filename.
-    pub fn from_filename(filename: &str) -> Result<Self, String> {
+    pub fn from_filename(
+        filename: &str,
+        file_type: &str,
+        schema: Option<Arc<Schema>>,
+        row_count: Option<usize>,
+    ) -> Result<Self, String> {
         let path = Path::new(filename);
 
-        // Attempt to open the file.
-        let file = File::open(path).map_err(|_| "Could not open file".to_string())?;
+        match file_type {
+            "parquet" => {
+                // Attempt to open the file.
+                let file = File::open(path).map_err(|_| "Could not open file".to_string())?;
 
-        // Create a SerializedFileReader to read Parquet metadata.
-        let reader = SerializedFileReader::new(file)
-            .map_err(|error| format!("Error creating Parquet reader: {}", error))?;
+                // Create a SerializedFileReader to read Parquet metadata.
+                let reader = SerializedFileReader::new(file)
+                    .map_err(|error| format!("Error creating Parquet reader: {}", error))?;
 
-        // Extract and store the Parquet metadata.
-        Ok(Self {
-            info: reader.metadata().to_owned(),
-        })
+                // Extract and store the Parquet metadata.
+                Ok(FileMetadata::Parquet(ParquetMetadataWrapper {
+                    info: reader.metadata().to_owned(),
+                }))
+            }
+            "csv" => {
+                // For CSV, we need the schema to display column information.
+                match (schema, row_count) {
+                    (Some(schema), Some(row_count)) => {
+                        Ok(FileMetadata::Csv(CsvMetadataWrapper { schema, row_count }))
+                    }
+                    _ => Err("Schema and Row count required for CSV metadata.".to_string()),
+                }
+            }
+            _ => Err("Unsupported file type.".to_string()),
+        }
     }
 
+    /// Renders the file metadata in the UI using egui.
+    pub fn render_metadata(&self, ui: &mut Ui) {
+        match self {
+            FileMetadata::Parquet(parquet_metadata) => {
+                parquet_metadata.render_metadata(ui);
+            }
+            FileMetadata::Csv(csv_metadata) => {
+                csv_metadata.render_metadata(ui);
+            }
+        }
+    }
+
+    /// Renders the file schema information in the UI using egui.
+    pub fn render_schema(&self, ui: &mut Ui) {
+        match self {
+            FileMetadata::Parquet(parquet_metadata) => {
+                parquet_metadata.render_schema(ui);
+            }
+            FileMetadata::Csv(csv_metadata) => {
+                csv_metadata.render_schema(ui);
+            }
+        }
+    }
+}
+
+impl ParquetMetadataWrapper {
     /// Renders the file metadata in the UI using egui.
     pub fn render_metadata(&self, ui: &mut Ui) {
         let file_metadata = self.info.file_metadata();
@@ -109,6 +167,57 @@ impl FileMetadata {
                         _ => "undefined".to_string(),
                     }
                 ));
+            });
+        }
+    }
+}
+
+impl CsvMetadataWrapper {
+    /// Renders the file metadata in the UI using egui.
+    // Display number of Columns and rows (no description available)
+    pub fn render_metadata(&self, ui: &mut Ui) {
+        // Use a frame to visually group the metadata.
+        Frame::default()
+            .stroke(Stroke::new(1.0, Color32::GRAY)) // Thin gray border for visual separation.
+            .outer_margin(2.0)
+            .inner_margin(10.0)
+            .show(ui, |ui| {
+                // Extract metadata values, providing defaults if they're missing.
+                // Create a grid layout
+                Grid::new("version_grid")
+                    .num_columns(2)
+                    .spacing([10.0, 20.0])
+                    .striped(true)
+                    .show(ui, |ui| {
+                        let version = env!("CARGO_PKG_VERSION");
+
+                        ui.label("Polars View Version");
+                        ui.label(version);
+                        ui.end_row();
+
+                        let nc = self.schema.len();
+
+                        ui.label("Columns:");
+                        ui.label(nc.to_string());
+                        ui.end_row();
+
+                        let nr = self.row_count;
+
+                        ui.label("Rows:");
+                        ui.label(nr.to_string());
+                        ui.end_row();
+                    });
+            });
+    }
+
+    /// Renders the file schema information in the UI using egui.
+    pub fn render_schema(&self, ui: &mut Ui) {
+        // Iterate over the fields in the schema.
+        for (name, dtype) in self.schema.iter() {
+            // Create a collapsing header for each column to show its details.
+            ui.collapsing(name.to_string(), |ui| {
+                // Display the field data type.
+                ui.label(format!("type: {}", dtype));
             });
         }
     }

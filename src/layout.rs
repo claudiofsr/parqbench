@@ -100,7 +100,25 @@ impl PolarsViewApp {
                     dbg!(&data.filters);
 
                     // Load metadata
-                    self.metadata = FileMetadata::from_filename(&filename).ok();
+                    self.metadata = match &*data.table_type {
+                        "parquet" => {
+                            FileMetadata::from_filename(&filename, "parquet", None, None).ok()
+                        }
+                        "csv" => {
+                            // let schema = (*data.df.schema().as_ref()).clone();
+                            let arc_schema = data.df.schema().clone();
+                            let row_count = data.df.height();
+                            FileMetadata::from_filename(
+                                &filename,
+                                "csv",
+                                Some(arc_schema),
+                                Some(row_count),
+                            )
+                            .ok()
+                        }
+                        _ => None,
+                    };
+
                     self.table = Arc::new(Some(data));
                     false // Data loading complete.
                 }

@@ -179,6 +179,8 @@ pub struct DataFrameContainer {
     pub df: Arc<DataFrame>,
     /// Filters applied to the DataFrame.
     pub filters: DataFilters,
+    /// String with "parquet" or "csv"
+    pub table_type: String,
 }
 
 impl DataFrameContainer {
@@ -191,19 +193,20 @@ impl DataFrameContainer {
         dbg!(&filename);
 
         // Determine file type based on extension and load accordingly.
-        let df = match get_extension(&filename).as_deref() {
-            Some("parquet") => Self::read_parquet(&filename).await,
-            Some("csv") => Self::read_csv(&filename).await,
+        let (df, table_type) = match get_extension(&filename).as_deref() {
+            Some("parquet") => (Self::read_parquet(&filename).await?, "parquet".to_string()),
+            Some("csv") => (Self::read_csv(&filename).await?, "csv".to_string()),
             _ => {
                 let msg = format!("Unknown file type: {:#?}", filename);
                 return Err(msg);
             }
-        }?;
+        };
 
         Ok(Self {
             filename,
             df: Arc::new(df),
             filters: DataFilters::default(),
+            table_type,
         })
     }
 
@@ -316,8 +319,8 @@ impl DataFrameContainer {
             .to_string();
 
         // Load the DataFrame from the file
-        let df: DataFrame = match get_extension(&filename).as_deref() {
-            Some("parquet") => Self::read_parquet(&filename).await?,
+        let (df, table_type): (DataFrame, String) = match get_extension(&filename).as_deref() {
+            Some("parquet") => (Self::read_parquet(&filename).await?, "parquet".to_string()),
             Some("csv") => {
                 // Convert csv_delimiter string to u8 delimiter
                 let delimiter: u8 = match csv_delimiter.len() {
@@ -349,7 +352,10 @@ impl DataFrameContainer {
                         )
                     })?;
 
-                lazyframe.collect().map_err(|e| format!("Error: {}", e))?
+                (
+                    lazyframe.collect().map_err(|e| format!("Error: {}", e))?,
+                    "csv".to_string(),
+                )
             }
             _ => {
                 let msg = format!("Unknown file type: {}", filename);
@@ -372,6 +378,7 @@ impl DataFrameContainer {
             filename,
             df: Arc::new(sql_df),
             filters,
+            table_type,
         })
     }
 

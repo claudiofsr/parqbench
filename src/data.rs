@@ -84,7 +84,7 @@ impl DataFilters {
         let width_max = ui.available_width();
 
         // Create a grid layout for the filter configuration.
-        let mut result = None; // Mover a declaração para fora do Grid
+        let mut result = None; // Move the declaration outside the Grid
 
         let grid = Grid::new("data_filters_grid")
             .num_columns(2)
@@ -96,61 +96,61 @@ impl DataFilters {
             Layout::top_down(Align::LEFT),
             |ui| {
                 grid.show(ui, |ui| {
-                ui.label("Filename:");
-                let filename_edit = TextEdit::singleline(&mut filename).desired_width(width_max);
-                ui.add(filename_edit)
-                    .on_hover_text("Enter filename and press the Apply button...");
-                ui.end_row();
+                    ui.label("Filename:");
+                    let filename_edit = TextEdit::singleline(&mut filename).desired_width(width_max);
+                    ui.add(filename_edit)
+                        .on_hover_text("Enter filename and press the Apply button...");
+                    ui.end_row();
 
-                ui.label("Table Name:");
-                let table_name_edit =
-                    TextEdit::singleline(&mut table_name).desired_width(width_max);
-                ui.add(table_name_edit)
-                    .on_hover_text("Enter table name for SQL queries...");
-                ui.end_row();
+                    ui.label("Table Name:");
+                    let table_name_edit =
+                        TextEdit::singleline(&mut table_name).desired_width(width_max);
+                    ui.add(table_name_edit)
+                        .on_hover_text("Enter table name for SQL queries...");
+                    ui.end_row();
 
-                ui.label("CSV Delimiter:");
-                let csv_delimiter_edit =
-                    TextEdit::singleline(&mut csv_delimiter).desired_width(width_max);
-                ui.add(csv_delimiter_edit)
-                    .on_hover_text("Enter the CSV delimiter character...");
-                ui.end_row();
+                    ui.label("CSV Delimiter:");
+                    let csv_delimiter_edit =
+                        TextEdit::singleline(&mut csv_delimiter).desired_width(width_max);
+                    ui.add(csv_delimiter_edit)
+                        .on_hover_text("Enter the CSV delimiter character...");
+                    ui.end_row();
 
-                ui.label("SQL Query:");
-                let query_edit = TextEdit::multiline(&mut query).desired_width(width_max);
-                ui.add(query_edit)
-                    .on_hover_text("Enter SQL query to filter and transform the data...");
-                ui.end_row();
+                    ui.label("SQL Query:");
+                    let query_edit = TextEdit::multiline(&mut query).desired_width(width_max);
+                    ui.add(query_edit)
+                        .on_hover_text("Enter SQL query to filter and transform the data...");
+                    ui.end_row();
 
-                // Add the button to the grid.
-                ui.label(""); // Empty label to align with the label column.
-                ui.with_layout(Layout::top_down(Align::Center), |ui| {
-                    if ui.button("Apply SQL Commands").clicked() {
-                        // Only create and return DataFilters if the required fields are not empty.
-                        if !filename.trim().is_empty()
-                            && !table_name.trim().is_empty()
-                            && !csv_delimiter.trim().is_empty()
-                            && !query.trim().is_empty()
-                        {
-                            result = Some(DataFilters {
-                                filename: Some(filename.clone()),
-                                table_name: table_name.clone(),
-                                csv_delimiter: csv_delimiter.clone(),
-                                query: Some(query.clone()),
-                                sort: self.sort.clone(), // Preserve existing sort state
-                            });
-                        } else {
-                            // Handle the case where required fields are empty.
-                            eprintln!(
-                                "Error: Filename, Table Name, CSV Delimiter, and Query cannot be empty."
-                            );
-                            result = None;
+                    // Add the button to the grid.
+                    ui.label(""); // Empty label to align with the label column.
+                    ui.with_layout(Layout::top_down(Align::Center), |ui| {
+                        if ui.button("Apply SQL Commands").clicked() {
+                            // Only create and return DataFilters if the required fields are not empty.
+                            if !filename.trim().is_empty()
+                                && !table_name.trim().is_empty()
+                                && !csv_delimiter.trim().is_empty()
+                                && !query.trim().is_empty()
+                            {
+                                result = Some(DataFilters {
+                                    filename: Some(filename.clone()),
+                                    table_name: table_name.clone(),
+                                    csv_delimiter: csv_delimiter.clone(),
+                                    query: Some(query.clone()),
+                                    sort: self.sort.clone(), // Preserve existing sort state
+                                });
+                            } else {
+                                // Handle the case where required fields are empty.
+                                eprintln!(
+                                    "Error: Filename, Table Name, CSV Delimiter, and Query cannot be empty."
+                                );
+                                result = None;
+                            }
                         }
-                    }
+                    });
+                    ui.end_row();
                 });
-                ui.end_row();
             });
-        });
 
         // Update the filter values with the edited values.
         self.filename = Some(filename);
@@ -178,7 +178,7 @@ impl DataFilters {
                     });
             });
 
-        result // Retorne o resultado
+        result // Return the result
     }
 }
 

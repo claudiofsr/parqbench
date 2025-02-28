@@ -33,9 +33,11 @@ pub fn get_extension(filename: &str) -> Option<String> {
         .map(|ext| ext.to_lowercase()) // Convert the extension to lowercase for case-insensitive comparison
 }
 
-/// Filtra colunas do tipo float64.
+/// Filters columns of type float64.
 ///
-/// Posteriormente, arredonda os valores da coluna
+/// Subsequently, rounds the column values.
+///
+/// This function is currently unused, but kept for potential future use.
 pub fn round_float64_columns(col: Column, decimals: u32) -> PolarsResult<Option<Column>> {
     let series = match col.as_series() {
         Some(s) => s,

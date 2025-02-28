@@ -24,7 +24,7 @@ pub enum FileMetadata {
 
 // Wrapper struct for Parquet metadata
 pub struct ParquetMetadataWrapper {
-    info: ParquetMetaData, // Parquet metadata.
+    metadata: ParquetMetaData, // Parquet metadata.
 }
 
 // Wrapper struct for CSV metadata.
@@ -55,7 +55,7 @@ impl FileMetadata {
 
                 // Extract and store the Parquet metadata.
                 Ok(FileMetadata::Parquet(ParquetMetadataWrapper {
-                    info: reader.metadata().to_owned(),
+                    metadata: reader.metadata().to_owned(),
                 }))
             }
             "csv" => {
@@ -99,7 +99,7 @@ impl FileMetadata {
 impl ParquetMetadataWrapper {
     /// Renders the file metadata in the UI using egui.
     pub fn render_metadata(&self, ui: &mut Ui) {
-        let file_metadata = self.info.file_metadata();
+        let file_metadata = self.metadata.file_metadata();
 
         // Use a frame to visually group the metadata.
         Frame::default()
@@ -131,7 +131,7 @@ impl ParquetMetadataWrapper {
 
     /// Renders the file schema information in the UI using egui.
     pub fn render_schema(&self, ui: &mut Ui) {
-        let file_metadata = self.info.file_metadata();
+        let file_metadata = self.metadata.file_metadata();
         // Iterate over the columns in the schema.
         for (idx, field) in file_metadata.schema_descr().columns().iter().enumerate() {
             // Create a collapsing header for each column to show its details.

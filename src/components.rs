@@ -3,7 +3,7 @@ use crate::{
     data::{DataFilters, DataFrameContainer, SortState},
 };
 
-use egui::{Color32, Frame, Grid, Layout, Stroke, TextStyle, Ui};
+use egui::{Color32, Direction, Frame, Grid, Layout, Stroke, TextStyle, Ui};
 use egui_extras::{Column, TableBuilder, TableRow};
 use parquet::{
     basic::ColumnOrder,
@@ -114,18 +114,6 @@ impl ParquetMetadataWrapper {
                     .spacing([10.0, 20.0])
                     .striped(true)
                     .show(ui, |ui| {
-                        let created_by = file_metadata.created_by().unwrap_or("unknown");
-
-                        ui.label("Data processing:");
-                        ui.label(created_by);
-                        ui.end_row();
-
-                        let version = env!("CARGO_PKG_VERSION");
-
-                        ui.label("Polars View Version");
-                        ui.label(version);
-                        ui.end_row();
-
                         let nc = file_metadata.schema_descr().num_columns();
 
                         ui.label("Columns:");
@@ -189,12 +177,6 @@ impl CsvMetadataWrapper {
                     .spacing([10.0, 20.0])
                     .striped(true)
                     .show(ui, |ui| {
-                        let version = env!("CARGO_PKG_VERSION");
-
-                        ui.label("Polars View Version");
-                        ui.label(version);
-                        ui.end_row();
-
                         let nc = self.schema.len();
 
                         ui.label("Columns:");
@@ -331,13 +313,13 @@ impl DataFrameContainer {
 
                     // Align center if it's an "Alíquota" column, otherwise align right.
                     if col_aliquota {
-                        Layout::centered_and_justified(egui::Direction::LeftToRight)
+                        Layout::centered_and_justified(Direction::LeftToRight)
                     } else {
                         Layout::right_to_left(egui::Align::Center)
                     }
                 } else if column.dtype().is_integer() || column.dtype().is_date() {
                     // Center integer values.
-                    Layout::centered_and_justified(egui::Direction::LeftToRight)
+                    Layout::centered_and_justified(Direction::LeftToRight)
                 } else {
                     // Default to left alignment for other data types.
                     Layout::left_to_right(egui::Align::Center)

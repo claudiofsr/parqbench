@@ -5,8 +5,9 @@ use crate::{
 };
 
 use egui::{
-    CentralPanel, Context, FontId, RichText, ScrollArea, SidePanel, TopBottomPanel,
-    ViewportCommand, menu, style::Visuals, warn_if_debug_build, widgets,
+    CentralPanel, Color32, Context, Direction, FontId, Frame, Grid, Hyperlink, Layout, RichText,
+    ScrollArea, SidePanel, Stroke, TopBottomPanel, ViewportCommand, menu, style::Visuals,
+    warn_if_debug_build, widgets,
 };
 use std::sync::Arc;
 use tokio::sync::oneshot::{self, error::TryRecvError};
@@ -230,12 +231,77 @@ impl eframe::App for PolarsViewApp {
 
                         ui.menu_button("About", |ui| {
                             // Display application information.
-                            let version = env!("CARGO_PKG_VERSION");
-                            let authors = env!("CARGO_PKG_AUTHORS");
-                            ui.label(RichText::new("Polars View").font(FontId::proportional(20.0)));
-                            ui.label(format!("Version: {version}"));
-                            ui.label(format!("Author: {authors}"));
-                            ui.label("Built with egui");
+                            Frame::default()
+                                .stroke(Stroke::new(1.0, Color32::GRAY)) // Thin gray border for visual separation.
+                                .outer_margin(2.0) // Set a margin outside the frame.
+                                .inner_margin(10.0) // Set a margin inside the frame.
+                                .show(ui, |ui| {
+                                    let version = env!("CARGO_PKG_VERSION");
+                                    let authors = env!("CARGO_PKG_AUTHORS");
+
+                                    Grid::new("about_grid")
+                                        .num_columns(2)
+                                        .spacing([10.0, 4.0])
+                                        .show(ui, |ui| {
+                                            ui.with_layout(
+                                                Layout::centered_and_justified(
+                                                    Direction::LeftToRight,
+                                                ),
+                                                |ui| {
+                                                    ui.label(
+                                                        RichText::new("Polars View")
+                                                            .font(FontId::proportional(20.0)),
+                                                    );
+                                                },
+                                            );
+                                            ui.end_row();
+
+                                            ui.with_layout(
+                                                Layout::centered_and_justified(
+                                                    Direction::LeftToRight,
+                                                ),
+                                                |ui| {
+                                                    ui.label(format!("Version: {version}"));
+                                                },
+                                            );
+                                            ui.end_row();
+
+                                            ui.horizontal(|ui| {
+                                                let url = "https://github.com/Kxnr/parqbench";
+                                                let heading =
+                                                    Hyperlink::from_label_and_url("parqbench", url);
+
+                                                ui.label("A fork of ");
+                                                ui.add(heading).on_hover_text(url);
+                                            });
+                                            ui.end_row();
+
+                                            ui.horizontal(|ui| {
+                                                let url = "https://github.com/pola-rs/polars";
+                                                let heading =
+                                                    Hyperlink::from_label_and_url("Polars", url);
+
+                                                ui.label("Powered by ");
+                                                ui.add(heading).on_hover_text(url);
+                                            });
+                                            ui.end_row();
+
+                                            ui.horizontal(|ui| {
+                                                let url = "https://github.com/emilk/egui";
+                                                let heading =
+                                                    Hyperlink::from_label_and_url("egui", url);
+
+                                                ui.label("Built with ");
+                                                ui.add(heading).on_hover_text(url);
+                                            });
+                                            ui.end_row();
+
+                                            ui.end_row();
+
+                                            ui.label(format!("Author: {authors}"));
+                                            ui.end_row();
+                                        });
+                                });
                         });
 
                         if ui.button("Quit").clicked() {

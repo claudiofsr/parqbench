@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2024"
 license = "GPL-3.0-or-later"
 authors = [
-    "Connor Keane <connor.keane@kxnr.me",
     "Claudio Fernandes de Souza Rodrigues <claudiofsrodrigues@gmail.com>",
 ]
 rust-version = "1.85"

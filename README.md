@@ -30,7 +30,7 @@ Polars View is a lightweight and efficient tool for inspecting and exploring Par
 2.  **Clone the Repository:**
 
     ```bash
-    git clone https://github.com/[your_username]/polars-view.git
+    git clone https://github.com/claudiofsr/polars-view.git
     cd polars-view
     ```
 

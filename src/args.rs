@@ -38,6 +38,7 @@ const APPLET_TEMPLATE: &str = "\
 )]
 pub struct Arguments {
     /// Set the parquet filename.
+    #[arg(short, long, required = false)]
     pub filename: Option<String>,
 
     /// Set the query.

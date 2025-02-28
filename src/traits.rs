@@ -91,12 +91,13 @@ impl Popover for Error {
                     |ui| {
                         // Use a frame to visually group the error message.
                         Frame::default()
-                            .stroke(Stroke::new(1.0, Color32::GRAY)) // Add a thin gray border for visual separation.
+                            .fill(Color32::from_rgb(255, 200, 200)) // Light red background for error indication
+                            .stroke(Stroke::new(1.0, Color32::DARK_RED)) // Dark red border for emphasis
                             .outer_margin(2.0) // Set a margin outside the frame.
                             .inner_margin(10.0) // Set a margin inside the frame.
                             .show(ui, |ui| {
-                                ui.label(&self.message); // Display the error message.
-                                ui.disable(); // Disable user interaction.
+                                ui.colored_label(Color32::BLACK, &self.message); // Display the error message in black.
+                                ui.disable(); // Disable user interaction within the frame.
                             });
                     },
                 );

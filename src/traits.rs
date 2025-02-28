@@ -53,7 +53,7 @@ impl Popover for Settings {
         let mut open = true;
 
         // Create a window named "Settings".
-        egui::Window::new("Settings")
+        Window::new("Settings")
             .collapsible(false) // Make the window non-collapsible.
             .open(&mut open) // Control the window's open state.
             .show(ctx, |ui| {
@@ -95,7 +95,7 @@ impl Popover for Error {
                             .outer_margin(2.0) // Set a margin outside the frame.
                             .inner_margin(10.0) // Set a margin inside the frame.
                             .show(ui, |ui| {
-                                ui.label(self.message.clone()); // Display the error message.
+                                ui.label(&self.message); // Display the error message.
                                 ui.disable(); // Disable user interaction.
                             });
                     },

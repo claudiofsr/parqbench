@@ -37,17 +37,32 @@ const APPLET_TEMPLATE: &str = "\
     styles=get_styles(),
 )]
 pub struct Arguments {
+    /// CSV delimiter.
+    #[arg(short, long, default_value = ";", help = "CSV delimiter character")]
+    pub delimiter: String,
+
     /// Set the parquet filename.
-    #[arg(short, long, required = false)]
+    #[arg(short, long, help = "Path to the data file (Parquet or CSV)")]
     pub filename: Option<String>,
 
     /// Set the query.
-    #[arg(short('q'), long("query"), required = false, requires = "filename")]
+    #[arg(
+        short,
+        long,
+        help = "SQL query to apply to the data",
+        requires = "filename"
+    )]
     pub query: Option<String>,
 
     /// Set the table_name.
-    #[arg(short('t'), long("table_name"), required = false, requires = "query")]
-    pub table_name: Option<String>,
+    #[arg(
+        short,
+        long,
+        default_value = "AllData",
+        help = "Table name for SQL queries",
+        requires = "query"
+    )]
+    pub table_name: String,
 }
 
 impl Arguments {

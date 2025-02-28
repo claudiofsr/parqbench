@@ -34,18 +34,20 @@ fn main() -> eframe::Result<()> {
         options,
         Box::new(move |cc| {
             // Create a new PolarsViewApp. If a filename is provided, load the data.
-            Ok(Box::new(match &args.filename {
-                Some(filename) => {
-                    // Log debug information about the data filters.
-                    DataFilters::debug(&args);
+            Ok(Box::new(if args.filename.is_some() {
+                // Log debug information about the data filters.
+                DataFilters::debug(&args);
 
-                    // Load the Parquet data from the specified filename.
-                    let future = DataFrameContainer::load_data(filename.to_string());
+                // Create data filters from command line arguments
+                let data_filters = DataFilters::new_with_args(&args);
 
-                    // Create a new PolarsViewApp with the data loading future.
-                    PolarsViewApp::new_with_future(cc, Box::new(Box::pin(future)))
-                }
-                None => PolarsViewApp::new(cc), // Create a new PolarsViewApp without loading data.
+                // Load the data from the specified filename.
+                let future = DataFrameContainer::load_data_with_filters(data_filters);
+
+                // Create a new PolarsViewApp with the data loading future.
+                PolarsViewApp::new_with_future(cc, Box::new(Box::pin(future)))
+            } else {
+                PolarsViewApp::new(cc) // Create a new PolarsViewApp without loading data.
             }))
         }),
     )

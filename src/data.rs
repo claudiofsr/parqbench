@@ -27,10 +27,10 @@ pub enum SortState {
 pub struct DataFilters {
     /// Optional filename of the data source.
     pub filename: Option<String>,
-    /// Optional table name for registering with Polars SQL Context.
-    pub table_name: Option<String>,
-    /// Optional CSV delimiter.
-    pub csv_delimiter: Option<String>,
+    /// Table name for registering with Polars SQL Context.
+    pub table_name: String,
+    /// CSV delimiter.
+    pub csv_delimiter: String,
     /// Optional SQL query to apply to the data.
     pub query: Option<String>,
     /// Optional column sorting state.
@@ -42,10 +42,21 @@ impl DataFilters {
     pub fn new(filename: impl AsRef<str> + ToString) -> Self {
         DataFilters {
             filename: Some(filename.to_string()),
-            table_name: Some("AllData".to_string()),
-            csv_delimiter: Some(";".to_string()),
+            table_name: "AllData".to_string(),
+            csv_delimiter: ";".to_string(),
             query: Some(SQL_COMMANDS[0].to_string()),
             ..Default::default()
+        }
+    }
+
+    /// Creates a new `DataFilters` instance from command line arguments.
+    pub fn new_with_args(args: &Arguments) -> Self {
+        DataFilters {
+            filename: args.filename.clone(),
+            table_name: args.table_name.clone(),
+            csv_delimiter: args.delimiter.clone(),
+            query: args.query.clone(),
+            sort: None,
         }
     }
 
@@ -55,7 +66,8 @@ impl DataFilters {
             filename: args.filename.clone(),
             query: args.query.clone(),
             table_name: args.table_name.clone(),
-            ..Default::default()
+            csv_delimiter: args.delimiter.clone(),
+            sort: None,
         };
 
         dbg!(data_filters);
@@ -65,8 +77,8 @@ impl DataFilters {
     pub fn render_filter(&mut self, ui: &mut Ui) -> Option<DataFilters> {
         // Create mutable copies of the filter values to allow editing.
         let mut filename = self.filename.clone()?;
-        let mut table_name = self.table_name.clone()?;
-        let mut csv_delimiter = self.csv_delimiter.clone()?;
+        let mut table_name = self.table_name.clone();
+        let mut csv_delimiter = self.csv_delimiter.clone();
         let mut query = self.query.clone()?;
 
         let width_max = ui.available_width();
@@ -122,8 +134,8 @@ impl DataFilters {
                         {
                             result = Some(DataFilters {
                                 filename: Some(filename.clone()),
-                                table_name: Some(table_name.clone()),
-                                csv_delimiter: Some(csv_delimiter.clone()),
+                                table_name: table_name.clone(),
+                                csv_delimiter: csv_delimiter.clone(),
                                 query: Some(query.clone()),
                                 sort: self.sort.clone(), // Preserve existing sort state
                             });
@@ -142,8 +154,8 @@ impl DataFilters {
 
         // Update the filter values with the edited values.
         self.filename = Some(filename);
-        self.table_name = Some(table_name);
-        self.csv_delimiter = Some(csv_delimiter);
+        self.table_name = table_name;
+        self.csv_delimiter = csv_delimiter;
         self.query = Some(query);
 
         // Collapsing header for SQL command examples.
@@ -208,6 +220,18 @@ impl DataFrameContainer {
             filters: DataFilters::default(),
             table_type,
         })
+    }
+
+    /// Loads data from a file (Parquet or CSV) using Polars and DataFilters.
+    pub async fn load_data_with_filters(filters: DataFilters) -> Result<Self, String> {
+        if filters.query.is_some() {
+            Self::load_data_with_sql(filters).await
+        } else {
+            let filename = filters.filename.clone().unwrap_or_default();
+            let mut data = Self::load_data(filename).await?;
+            data.filters = filters;
+            Ok(data)
+        }
     }
 
     /// Reads a Parquet file into a Polars DataFrame.
@@ -302,13 +326,9 @@ impl DataFrameContainer {
             return Err("No filename".to_string());
         };
 
-        let Some(table_name) = filters.table_name.clone() else {
-            return Err("No Table Name".to_string());
-        };
+        let table_name = filters.table_name.clone();
 
-        let Some(csv_delimiter) = filters.csv_delimiter.clone() else {
-            return Err("No CSV Delimiter".to_string());
-        };
+        let csv_delimiter = filters.csv_delimiter.clone();
 
         let Some(query) = &filters.query else {
             return Err("No query provided".to_string());

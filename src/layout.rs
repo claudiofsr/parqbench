@@ -91,13 +91,8 @@ impl PolarsViewApp {
                     let filename = data.filename.clone();
                     dbg!(&filename);
 
-                    // Create data filters
-                    let mut data_filters = DataFilters::new(&filename);
-                    if let Some(delimiter) = &data.filters.csv_delimiter {
-                        data_filters.csv_delimiter = Some(delimiter.to_string())
-                    }
-                    self.data_filters = data_filters;
-
+                    // Update data filters
+                    self.data_filters = data.filters.clone();
                     dbg!(&data.filters);
 
                     // Load metadata

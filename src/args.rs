@@ -1,5 +1,7 @@
 use clap::Parser;
 
+use crate::SQL_COMMANDS;
+
 // https://stackoverflow.com/questions/74068168/clap-rs-not-printing-colors-during-help
 fn get_styles() -> clap::builder::Styles {
     let cyan = anstyle::Color::Ansi(anstyle::AnsiColor::Cyan);
@@ -49,6 +51,7 @@ pub struct Arguments {
     #[arg(
         short,
         long,
+        default_value = SQL_COMMANDS[0],
         help = "SQL query to apply to the data",
         requires = "filename"
     )]
